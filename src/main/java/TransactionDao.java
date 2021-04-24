@@ -1,10 +1,10 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 class TransactionDao {
+
 
     public void addTransaction(Transaction transaction) {
         Connection connection = connect();
@@ -16,13 +16,11 @@ class TransactionDao {
             preparedStatement.setString(1, transaction.getTransactionType());
             preparedStatement.setString(2, transaction.getDescription());
             preparedStatement.setBigDecimal(3, transaction.getAmount());
-            preparedStatement.setDate(4, transaction.getDateStamp());
+            preparedStatement.setDate(4, Date.valueOf(transaction.getDateStamp()));
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Brak zapisu do bazy: " + e.getMessage());
         }
-
-        closeConnection(connection);
     }
 
     public void modifyTransaction(Transaction transaction) {
@@ -35,29 +33,57 @@ class TransactionDao {
             preparedStatement.setString(1, transaction.getTransactionType());
             preparedStatement.setString(2, transaction.getDescription());
             preparedStatement.setBigDecimal(3, transaction.getAmount());
-            preparedStatement.setDate(4, transaction.getDateStamp());
+            preparedStatement.setDate(4, Date.valueOf(transaction.getDateStamp()));
             preparedStatement.setInt(5, transaction.getId());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Brak zapisu do bazy: " + e.getMessage());
         }
-
-        closeConnection(connection);
     }
 
-    public List<Transaction> outcomes() {
-        return;
-    }//wspominales zeby robic to listami, ale dalej brakuje mi konceptu
+    public void deleteTransaction(Transaction transaction) {
+        Connection connection = connect();
 
-
-
-    private void closeConnection(Connection connection) {
+        PreparedStatement preparedStatement = null;
         try {
-            connection.close();
+            String sql = "DELETE FROM transactions WHERE id = ?";
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setInt(1, transaction.getId());
+            preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println("Brak zapisu do bazy: " + e.getMessage());
         }
     }
+
+    ResultSet resultSet;
+
+    public List<Transaction> outcomes = new ArrayList<>() {
+        while(resultSet.next())
+        {
+            Transaction outcome = new Transaction(resultSet);
+            outcomes.add(outcome);
+        }
+    }
+
+
+    public List<Transaction> incomes = new ArrayList<>() {
+        while(resultSet.next())
+        {
+            Transaction income = new Transaction(resultSet);
+            incomes.add(income);
+        }
+    }
+
+
+    public void closeConnection() {
+        try {
+            System.out.println("Zamykam połączenie");
+            connection.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Błąd zamknięcia połączenia", e);
+        }
+    }
+
 
     private Connection connect() {
         try {
